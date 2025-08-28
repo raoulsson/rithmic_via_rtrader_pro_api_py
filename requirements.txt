@@ -7,3 +7,4 @@ aiohttp==3.9.0
 pywin32==306
 matplotlib==3.8.1
 plotly==5.18.0
+xlwings==0.33.15
