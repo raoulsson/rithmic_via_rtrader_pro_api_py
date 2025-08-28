@@ -1,9 +1,8 @@
+import json
 import socket
 import struct
-import json
 import time
-import threading
-from datetime import datetime
+
 
 class RTraderProtocolProbe:
     def __init__(self):
@@ -92,7 +91,7 @@ class RTraderProtocolProbe:
             b"\x00\x00\x00\x04PING",
             b"\x01\x00\x00\x00PING",
             b"\xFF\xFE" + b"PING",
-            ]
+        ]
 
         for msg in test_messages:
             try:
@@ -184,7 +183,7 @@ class RTraderProtocolProbe:
         # Binary analysis
         print(f"    → Binary protocol:")
         print(f"      First 4 bytes (hex): {data[:4].hex()}")
-        print(f"      First 4 bytes (int): {struct.unpack('>I', data[:4])[0] if len(data)>=4 else 'N/A'}")
+        print(f"      First 4 bytes (int): {struct.unpack('>I', data[:4])[0] if len(data) >= 4 else 'N/A'}")
 
         # Look for patterns
         if data[:3] == b"FIX":
@@ -266,9 +265,9 @@ class RTraderProtocolProbe:
         working_ports = []
 
         for port in self.ports:
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print(f"TESTING PORT {port}")
-            print(f"{'='*60}")
+            print(f"{'=' * 60}")
 
             # Quick connectivity check
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -322,6 +321,7 @@ class RTraderProtocolProbe:
         print("2. Look for SDK or sample code from Rithmic")
         print("3. Contact Rithmic support for local API specs")
         print("4. Try Wireshark to capture traffic when other plugins connect")
+
 
 import string  # Add this import at the top
 

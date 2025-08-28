@@ -1,9 +1,9 @@
+import ctypes
+import json
 import mmap
 import struct
 import time
-import ctypes
-from ctypes import wintypes
-import json
+
 
 class RithmicSharedMemoryReader:
     def __init__(self):
@@ -16,9 +16,9 @@ class RithmicSharedMemoryReader:
 
     def read_shared_memory(self, name, size=65536):
         """Read from Windows shared memory"""
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"READING SHARED MEMORY: {name}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         try:
             # Open existing shared memory
@@ -111,7 +111,7 @@ class RithmicSharedMemoryReader:
         for size in sizes:
             if len(data) >= size * 2:
                 chunk1 = data[:size]
-                chunk2 = data[size:size*2]
+                chunk2 = data[size:size * 2]
 
                 # Check if chunks have similar structure
                 similarity = sum(1 for a, b in zip(chunk1, chunk2) if a == b)
@@ -145,7 +145,7 @@ class RithmicSharedMemoryReader:
                 # Find what changed
                 for i in range(min(len(current), len(previous))):
                     if current[i] != previous[i]:
-                        print(f"Change at offset {i}: {previous[i:i+10].hex()} → {current[i:i+10].hex()}")
+                        print(f"Change at offset {i}: {previous[i:i + 10].hex()} → {current[i:i + 10].hex()}")
                         break
 
                 previous = current

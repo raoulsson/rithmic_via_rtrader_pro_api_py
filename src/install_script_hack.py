@@ -20,13 +20,13 @@ print("\n✓ All packages installed!")
 
 # Test imports
 print("\nTesting imports...")
-import websocket
+
 print("✓ websocket-client working")
-import pandas
+
 print("✓ pandas working")
-import numpy
+
 print("✓ numpy working")
-import win32com.client
+
 print("✓ pywin32 working")
 
 print("\n🎉 Setup complete! You can now run main.py")

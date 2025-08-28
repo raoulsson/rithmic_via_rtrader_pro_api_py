@@ -3,6 +3,7 @@ all_good = True
 
 try:
     import websocket
+
     print("✓ websocket-client installed")
 except ImportError as e:
     print(f"✗ websocket-client NOT installed: {e}")
@@ -10,6 +11,7 @@ except ImportError as e:
 
 try:
     import pandas as pd
+
     print("✓ pandas installed")
 except ImportError as e:
     print(f"✗ pandas NOT installed: {e}")
@@ -17,6 +19,7 @@ except ImportError as e:
 
 try:
     import numpy as np
+
     print("✓ numpy installed")
 except ImportError as e:
     print(f"✗ numpy NOT installed: {e}")
@@ -24,6 +27,7 @@ except ImportError as e:
 
 try:
     import win32com.client
+
     print("✓ pywin32 installed")
 except ImportError as e:
     print(f"✗ pywin32 NOT installed: {e}")

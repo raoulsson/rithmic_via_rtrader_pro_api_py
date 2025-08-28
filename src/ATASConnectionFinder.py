@@ -1,7 +1,8 @@
-import subprocess
 import socket
+import subprocess
+
 import psutil
-import time
+
 
 class ATASConnectionFinder:
     """Find ATAS network connections to help with Wireshark filtering"""
@@ -252,6 +253,7 @@ then look for packets to/from these IPs:
 - 52.36.x.x (AWS West)
 - 54.187.x.x (AWS Oregon)
 """)
+
 
 if __name__ == "__main__":
     print("Make sure ATAS is running and connected to Rithmic")

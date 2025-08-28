@@ -1,6 +1,6 @@
 import socket
 import struct
-import time
+
 
 class RithmicBinaryClient:
     def __init__(self):
@@ -68,6 +68,7 @@ class RithmicBinaryClient:
         finally:
             if self.sock:
                 self.sock.close()
+
 
 # Test
 client = RithmicBinaryClient()

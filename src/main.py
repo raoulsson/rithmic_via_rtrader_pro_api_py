@@ -8,18 +8,13 @@ This implementation uses the plugin architecture where R | Trader Pro acts as
 the gateway, and your app connects locally on the same machine.
 """
 
-import socket
 import json
-import struct
-import asyncio
-import websocket
 import threading
-from datetime import datetime
-from typing import Dict, List, Optional, Callable
 from dataclasses import dataclass
-from enum import Enum
-import pandas as pd
-import xml.etree.ElementTree as ET
+from datetime import datetime
+
+import websocket
+
 
 # =====================================================
 # CONFIGURATION
@@ -41,6 +36,7 @@ class RTraderProConfig:
     enable_market_data: bool = True
     allow_plugins: bool = True  # MUST BE ENABLED!
 
+
 # =====================================================
 # STEP 1: ENABLE PLUGIN MODE IN R | TRADER PRO
 # =====================================================
@@ -55,6 +51,7 @@ IMPORTANT SETUP STEPS:
 3. Login with your AMP credentials
 4. Keep R | Trader Pro running while using this plugin
 """
+
 
 # =====================================================
 # LOCAL WEBSOCKET CONNECTION
@@ -126,6 +123,7 @@ class RTraderProConnector:
         if msg_type in self.callbacks:
             for callback in self.callbacks[msg_type]:
                 callback(data)
+
 
 # =====================================================
 # LEVEL 2 DOM HANDLER
@@ -211,6 +209,7 @@ class Level2DOMManager:
     def get_dom(self, symbol: str) -> dict:
         """Get current DOM for symbol"""
         return self.dom_data.get(symbol, {})
+
 
 # =====================================================
 # ORDER EXECUTION MANAGER
@@ -333,6 +332,7 @@ class OrderManager:
 
         print(f"Position: {symbol} = {position} @ {avg_price}")
 
+
 # =====================================================
 # MAIN TRADING APPLICATION
 # =====================================================
@@ -408,6 +408,7 @@ class MNQTradingSystem:
                 price=entry_price
             )
 
+
 # =====================================================
 # USAGE EXAMPLE
 # =====================================================
@@ -421,6 +422,7 @@ if __name__ == "__main__":
 
     # Run sample strategy
     import time
+
     try:
         while True:
             trading_system.execute_sample_strategy()

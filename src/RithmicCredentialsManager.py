@@ -1,10 +1,9 @@
-import socket
 import json
-import hashlib
-import base64
-import time
 import os
+import socket
+import time
 import winreg
+
 
 class RithmicCredentialsManager:
     def __init__(self):
@@ -13,19 +12,19 @@ class RithmicCredentialsManager:
         # Common credential fields for Rithmic
         self.rithmic_credentials = {
             # These are typically required for direct Rithmic API
-            '****': '',           # Your username
-            '****': '',       # Your password
-            'system_name': '',    # System identifier (assigned by Rithmic)
-            'fcm_id': '',        # FCM (Futures Commission Merchant) ID
-            'ib_id': '',         # IB (Introducing Broker) ID
-            'environment': 'TEST', # TEST or LIVE
-            'gateway': '',        # Gateway server
+            '****': '',  # Your username
+            '****': '',  # Your password
+            'system_name': '',  # System identifier (assigned by Rithmic)
+            'fcm_id': '',  # FCM (Futures Commission Merchant) ID
+            'ib_id': '',  # IB (Introducing Broker) ID
+            'environment': 'TEST',  # TEST or LIVE
+            'gateway': '',  # Gateway server
         }
 
         # For local R|Trader Pro plugin connection
         self.plugin_credentials = {
             'plugin_name': 'PythonPlugin',
-            'api_key': '',        # May need to generate in R|Trader
+            'api_key': '',  # May need to generate in R|Trader
             'session_token': '',  # Might be available from current session
             'app_id': 'python_trader_1.0',
         }
@@ -329,6 +328,7 @@ RTRADER_PORT=3010
    - Look for .pdf, .txt, .html files
    - Search for "API" or "Plugin" docs
 """)
+
 
 if __name__ == "__main__":
     manager = RithmicCredentialsManager()

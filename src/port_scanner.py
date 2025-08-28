@@ -1,6 +1,6 @@
 import socket
 import subprocess
-import re
+
 
 def find_rtrader_process():
     """Find R|Trader Pro process and its ports using netstat"""
@@ -64,6 +64,7 @@ def find_rtrader_process():
         print(f"Error scanning processes: {e}")
         return []
 
+
 def scan_common_ports():
     """Scan common ports that trading platforms use"""
     common_ports = [
@@ -105,6 +106,7 @@ def scan_common_ports():
         print("✗ No common trading platform ports found open")
 
     return open_ports
+
 
 def test_port_service(port):
     """Try to identify what service is running on a port"""
@@ -156,12 +158,12 @@ def test_port_service(port):
     print("  → Could not identify service type")
     return None
 
+
 def check_rtd_files():
     """Check for RTD-related files in common locations"""
     print("\nSearching for RTD files...")
     print("-" * 50)
 
-    import os
     import glob
 
     common_paths = [
@@ -189,6 +191,7 @@ def check_rtd_files():
         print("  The RTD component may need to be installed separately")
 
     return rtd_files
+
 
 def main():
     print("=" * 60)
@@ -233,6 +236,7 @@ def main():
     print("1. Check if there's a separate RTD installer from Rithmic")
     print("2. Look in R|Trader Pro installation folder for RTD-related files")
     print("3. Contact Rithmic support for RTD setup documentation")
+
 
 if __name__ == "__main__":
     main()

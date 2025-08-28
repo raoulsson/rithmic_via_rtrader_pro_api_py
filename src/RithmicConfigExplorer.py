@@ -1,8 +1,6 @@
 import os
 import xml.etree.ElementTree as ET
-import configparser
-import json
-import winreg
+
 
 class RithmicConfigExplorer:
     def __init__(self):
@@ -271,6 +269,7 @@ Based on the investigation, here are alternative approaches:
 
         # Provide recommendations
         self.suggest_alternative_approach()
+
 
 if __name__ == "__main__":
     explorer = RithmicConfigExplorer()

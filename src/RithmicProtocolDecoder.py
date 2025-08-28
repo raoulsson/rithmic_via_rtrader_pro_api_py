@@ -1,7 +1,8 @@
 import socket
 import struct
 import time
-from typing import Optional, Tuple, Dict, Any
+from typing import Optional
+
 
 class RithmicProtocolDecoder:
     """Decode and understand Rithmic's binary protocol"""
@@ -29,7 +30,7 @@ class RithmicProtocolDecoder:
             if offset + 4 > len(data):
                 break
 
-            field_header = struct.unpack('>I', data[offset:offset+4])[0]
+            field_header = struct.unpack('>I', data[offset:offset + 4])[0]
             field_type = field_header >> 16  # Upper 16 bits
             field_data_len = field_header & 0xFFFF  # Lower 16 bits
             offset += 4
@@ -37,12 +38,12 @@ class RithmicProtocolDecoder:
             if field_type == 0x7FFE or field_type == 0x7FF0:  # Numeric field
                 if field_data_len == 0:
                     # Length in next 4 bytes
-                    actual_len = struct.unpack('>I', data[offset:offset+4])[0]
+                    actual_len = struct.unpack('>I', data[offset:offset + 4])[0]
                     offset += 4
-                    field_data = data[offset:offset+actual_len]
+                    field_data = data[offset:offset + actual_len]
                     offset += actual_len
                 else:
-                    field_data = data[offset:offset+field_data_len]
+                    field_data = data[offset:offset + field_data_len]
                     offset += field_data_len
 
                 # Try to decode as string
@@ -60,9 +61,9 @@ class RithmicProtocolDecoder:
                     print(f"  Field 0x{field_type:04x}: {value}")
 
             elif field_type == 0x7FFF:  # String field
-                str_len = struct.unpack('>I', data[offset:offset+4])[0]
+                str_len = struct.unpack('>I', data[offset:offset + 4])[0]
                 offset += 4
-                string = data[offset:offset+str_len].decode('ascii')
+                string = data[offset:offset + str_len].decode('ascii')
                 offset += str_len
                 fields.append((field_type, string))
                 print(f"  String 0x{field_type:04x}: '{string}'")
@@ -70,17 +71,17 @@ class RithmicProtocolDecoder:
             elif field_type == 0x0000 and field_data_len == 0:
                 # Another encoding format
                 if offset + 4 <= len(data):
-                    str_len = struct.unpack('>I', data[offset:offset+4])[0]
+                    str_len = struct.unpack('>I', data[offset:offset + 4])[0]
                     offset += 4
                     if offset + str_len <= len(data):
-                        string = data[offset:offset+str_len].decode('ascii')
+                        string = data[offset:offset + str_len].decode('ascii')
                         offset += str_len
                         fields.append((0, string))
                         print(f"  String: '{string}'")
             else:
                 # Unknown field type
                 if field_data_len > 0 and offset + field_data_len <= len(data):
-                    field_data = data[offset:offset+field_data_len]
+                    field_data = data[offset:offset + field_data_len]
                     offset += field_data_len
                     fields.append((field_type, field_data.hex()))
                     print(f"  Field 0x{field_type:04x}: {field_data.hex()}")
@@ -227,9 +228,9 @@ class RithmicBinaryProtocol:
 
     def test_connection_sequence(self):
         """Test the full connection sequence as captured"""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("TESTING RITHMIC CONNECTION SEQUENCE")
-        print("="*60)
+        print("=" * 60)
 
         if not self.connect():
             return
@@ -268,7 +269,7 @@ class RithmicBinaryProtocol:
             for i in range(3):
                 response = self.receive_message()
                 if response:
-                    print(f"   Message {i+1}: {len(response)} bytes")
+                    print(f"   Message {i + 1}: {len(response)} bytes")
 
         except Exception as e:
             print(f"Error: {e}")
@@ -281,27 +282,29 @@ class RithmicBinaryProtocol:
 
 def analyze_captures():
     """Analyze the captured packets"""
-    print("="*60)
+    print("=" * 60)
     print("ANALYZING CAPTURED PACKETS")
-    print("="*60)
+    print("=" * 60)
 
     decoder = RithmicProtocolDecoder()
 
     print("\nFrame 792 - Initial Ping:")
-    print("-"*40)
+    print("-" * 40)
     decoder.decode_packet("0000001042420000000100000000000470696e67")
 
     print("\nFrame 831 - Server Response:")
-    print("-"*40)
-    decoder.decode_packet("0000002d4242000000037ffe0000000231347ffe0000000f756e6b6e6f776e20726571756573747fff0000000470696e67")
+    print("-" * 40)
+    decoder.decode_packet(
+        "0000002d4242000000037ffe0000000231347ffe0000000f756e6b6e6f776e20726571756573747fff0000000470696e67")
 
     print("\nFrame 833 - Login Agent Repository:")
-    print("-"*40)
-    decoder.decode_packet("0000004b4242000000042710000000176c6f67696e5f6167656e745f7265706f7369746f7279637ff00000000a313735363335373538377ff0000000063134333030300000000000066d72765f6c62")
+    print("-" * 40)
+    decoder.decode_packet(
+        "0000004b4242000000042710000000176c6f67696e5f6167656e745f7265706f7369746f7279637ff00000000a313735363335373538377ff0000000063134333030300000000000066d72765f6c62")
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("KEY FINDINGS")
-    print("="*60)
+    print("=" * 60)
     print("""
 1. Protocol Structure:
    - 4-byte length prefix (big-endian)
@@ -332,7 +335,7 @@ if __name__ == "__main__":
     analyze_captures()
 
     # Then test connection
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     input("Press Enter to test connection...")
 
     client = RithmicBinaryProtocol()

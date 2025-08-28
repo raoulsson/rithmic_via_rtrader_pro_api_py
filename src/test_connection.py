@@ -1,12 +1,11 @@
-import socket
-import websocket
-import json
-import time
 import os
-import glob
-import win32com.client
+import socket
+from typing import Dict
+
 import pythoncom
-from typing import Optional, Dict, Any
+import websocket
+import win32com.client
+
 
 class RithmicConnectionTester:
     def __init__(self):
@@ -293,6 +292,7 @@ class RithmicConnection:
         print("2. Update your connection code to use these ports")
         print("3. Check Rithmic documentation for the protocol format")
         print("4. For RTD: May need separate RTD add-in installation")
+
 
 if __name__ == "__main__":
     tester = RithmicConnectionTester()
