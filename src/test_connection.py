@@ -2,289 +2,300 @@ import socket
 import websocket
 import json
 import time
+import os
+import glob
 import win32com.client
 import pythoncom
 from typing import Optional, Dict, Any
 
-class RTraderProTester:
+class RithmicConnectionTester:
     def __init__(self):
-        self.rtd_progid = "RithmicRTD.RTD"  # Common ProgID for Rithmic RTD
-        self.ws_url = "ws://127.0.0.1:8000/rithmic"
-        self.port = 8000
-        self.rtd = None
+        # Updated ports based on scan results
+        self.rithmic_ports = [3010, 3011, 3012, 3013]
+        self.data_port = 5555
+        self.rtd_progids = [
+            "Rithmic.RTD",
+            "RithmicRTD.RTD",
+            "RithmicTrader.RTD",
+            "RTrader.RTD",
+            "Rithmic.ExcelRTD"
+        ]
+        self.installation_path = r"C:\Program Files (x86)\Rithmic\Rithmic Trader Pro"
 
-    def test_port_open(self) -> bool:
-        """Check if R|Trader Pro port is accessible"""
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(2)
-        result = sock.connect_ex(('127.0.0.1', self.port))
-        sock.close()
+    def test_rithmic_ports(self) -> Dict[int, bool]:
+        """Test all Rithmic ports"""
+        print("Testing Rithmic Trader Pro Ports...")
+        print("-" * 40)
 
-        if result == 0:
-            print(f"✓ Port {self.port} is open - R|Trader Pro appears to be running")
-            return True
-        else:
-            print(f"✗ Port {self.port} not accessible")
-            print("  → Start R|Trader Pro and enable 'Allow Plug-ins'")
-            return False
+        results = {}
+        for port in self.rithmic_ports + [self.data_port]:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            result = sock.connect_ex(('127.0.0.1', port))
+            sock.close()
 
-    def test_websocket(self) -> bool:
-        """Test WebSocket connectivity"""
+            if result == 0:
+                print(f"✓ Port {port} is OPEN")
+                results[port] = True
+
+                # Try to identify the service
+                self._probe_port_protocol(port)
+            else:
+                print(f"✗ Port {port} is CLOSED")
+                results[port] = False
+
+        return results
+
+    def _probe_port_protocol(self, port):
+        """Try different protocols on the port"""
+        # Test 1: Try WebSocket
         try:
-            ws = websocket.create_connection(self.ws_url, timeout=2)
-            print(f"✓ WebSocket connection established to {self.ws_url}")
-
-            # Try sending a test message
-            test_msg = {"type": "PING", "timestamp": time.time()}
-            ws.send(json.dumps(test_msg))
-
-            # Try to receive response (with timeout)
-            ws.settimeout(1)
-            try:
-                response = ws.recv()
-                print(f"  → Received response: {response[:100]}...")
-            except:
-                print("  → No immediate response (this may be normal)")
-
+            ws = websocket.create_connection(f"ws://127.0.0.1:{port}/", timeout=1)
+            print(f"  → Port {port}: WebSocket connection successful!")
             ws.close()
-            return True
+            return "WebSocket"
+        except:
+            pass
 
-        except ConnectionRefusedError:
-            print(f"✗ WebSocket connection refused at {self.ws_url}")
-            print("  → R|Trader Pro may not have plugins enabled")
-            return False
-        except Exception as e:
-            print(f"✗ WebSocket error: {type(e).__name__}: {e}")
-            return False
+        # Test 2: Try WebSocket with different paths
+        paths = ["/rithmic", "/api", "/rtd", "/data", "/trading", "/"]
+        for path in paths:
+            try:
+                ws = websocket.create_connection(f"ws://127.0.0.1:{port}{path}", timeout=0.5)
+                print(f"  → Port {port}: WebSocket works at path '{path}'")
+                ws.close()
+                return f"WebSocket{path}"
+            except:
+                continue
 
-    def test_rtd_registration(self) -> bool:
-        """Check if Rithmic RTD is registered in Windows"""
+        # Test 3: Try raw socket with Rithmic protocol hint
         try:
-            import winreg
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            sock.connect(('127.0.0.1', port))
 
-            # Check both 32-bit and 64-bit registry locations
-            locations = [
-                (winreg.HKEY_CLASSES_ROOT, f"{self.rtd_progid}\\CLSID"),
-                (winreg.HKEY_CLASSES_ROOT, self.rtd_progid),
+            # Send a simple message
+            test_messages = [
+                b"PING\n",
+                b'{"type":"ping"}\n',
+                b'\x00\x00\x00\x04PING',  # Length-prefixed
             ]
 
-            found = False
-            for hkey, subkey in locations:
+            for msg in test_messages:
                 try:
-                    with winreg.OpenKey(hkey, subkey) as key:
-                        found = True
-                        break
+                    sock.send(msg)
+                    sock.settimeout(0.5)
+                    response = sock.recv(1024)
+                    if response:
+                        print(f"  → Port {port}: Got response with test message")
+                        print(f"     Response (first 50 bytes): {response[:50]}")
+                        sock.close()
+                        return "Custom Protocol"
                 except:
                     continue
 
-            if found:
-                print(f"✓ RTD Server '{self.rtd_progid}' is registered in Windows")
-                return True
-            else:
-                print(f"✗ RTD Server '{self.rtd_progid}' not found in registry")
-                print("  → You may need to register the RTD server or install Rithmic RTD")
-                return False
+            sock.close()
+        except:
+            pass
+
+        print(f"  → Port {port}: Protocol unknown (may need authentication)")
+        return "Unknown"
+
+    def find_rtd_files(self):
+        """Search for RTD-related files"""
+        print("\nSearching for RTD Components...")
+        print("-" * 40)
+
+        rtd_files = []
+        dll_files = []
+
+        # Check Rithmic installation directory
+        if os.path.exists(self.installation_path):
+            print(f"✓ Found installation: {self.installation_path}")
+
+            for root, dirs, files in os.walk(self.installation_path):
+                for file in files:
+                    file_lower = file.lower()
+                    full_path = os.path.join(root, file)
+
+                    if 'rtd' in file_lower:
+                        rtd_files.append(full_path)
+                        print(f"  → RTD File: {file}")
+                    elif 'excel' in file_lower:
+                        dll_files.append(full_path)
+                        print(f"  → Excel Integration: {file}")
+                    elif file_lower.endswith('.dll') and any(x in file_lower for x in ['api', 'plugin', 'external']):
+                        dll_files.append(full_path)
+                        print(f"  → API/Plugin DLL: {file}")
+
+        # Check for registered RTD servers
+        print("\nChecking Windows Registry for RTD...")
+        self._check_registry_rtd()
+
+        return rtd_files, dll_files
+
+    def _check_registry_rtd(self):
+        """Check registry for RTD registrations"""
+        try:
+            import winreg
+
+            # Check HKCR for RTD servers
+            print("Scanning for registered RTD servers...")
+
+            for progid in self.rtd_progids:
+                try:
+                    key = winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, progid)
+                    print(f"  ✓ Found registered: {progid}")
+                    winreg.CloseKey(key)
+
+                    # Try to get CLSID
+                    try:
+                        clsid_key = winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, f"{progid}\\CLSID")
+                        clsid = winreg.QueryValueEx(clsid_key, "")[0]
+                        print(f"    CLSID: {clsid}")
+                        winreg.CloseKey(clsid_key)
+                    except:
+                        pass
+
+                except:
+                    continue
+
+            # Look for any Rithmic entries
+            try:
+                key = winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, "")
+                i = 0
+                while True:
+                    try:
+                        subkey_name = winreg.EnumKey(key, i)
+                        if 'rithmic' in subkey_name.lower() or 'rtrader' in subkey_name.lower():
+                            print(f"  → Found registry entry: {subkey_name}")
+                        i += 1
+                    except WindowsError:
+                        break
+                winreg.CloseKey(key)
+            except:
+                pass
 
         except Exception as e:
-            print(f"✗ Could not check RTD registration: {e}")
-            return False
+            print(f"  Registry scan error: {e}")
 
-    def test_rtd_connection(self) -> bool:
-        """Test actual RTD connection"""
-        try:
-            pythoncom.CoInitialize()
+    def test_rtd_com(self):
+        """Try to initialize RTD COM objects"""
+        print("\nTesting RTD COM Objects...")
+        print("-" * 40)
 
-            # Try to create RTD object
-            self.rtd = win32com.client.Dispatch(self.rtd_progid)
-            print(f"✓ Successfully created RTD object '{self.rtd_progid}'")
+        pythoncom.CoInitialize()
 
-            # Try to connect (ServerStart method)
+        for progid in self.rtd_progids:
             try:
-                result = self.rtd.ServerStart(None)
-                if result == 1:  # 1 typically means success
-                    print("✓ RTD ServerStart successful")
+                rtd = win32com.client.Dispatch(progid)
+                print(f"✓ Successfully created COM object: {progid}")
 
-                    # Try to get some test data
-                    self.test_rtd_data_retrieval()
+                # Try to start the server
+                try:
+                    result = rtd.ServerStart(None)
+                    print(f"  → ServerStart returned: {result}")
+                    rtd.ServerTerminate()
+                except Exception as e:
+                    print(f"  → ServerStart error: {e}")
 
-                    # Clean shutdown
-                    self.rtd.ServerTerminate()
-                    return True
-                else:
-                    print(f"✗ RTD ServerStart returned: {result}")
-                    return False
+                return progid
 
             except Exception as e:
-                print(f"✗ RTD ServerStart failed: {e}")
-                return False
+                continue
 
-        except Exception as e:
-            print(f"✗ Could not create RTD object: {e}")
-            print("  → Make sure Rithmic RTD is installed and registered")
-            print("  → You may need to run 'regsvr32 RithmicRTD.dll' as admin")
-            return False
-        finally:
-            pythoncom.CoUninitialize()
+        print("✗ No RTD COM objects could be created")
+        print("  RTD may not be installed or registered")
 
-    def test_rtd_data_retrieval(self):
-        """Try to retrieve data via RTD"""
-        if not self.rtd:
-            return
+        pythoncom.CoUninitialize()
+        return None
 
-        try:
-            # Common RTD test - try to get connection status
-            # Format: =RTD("RithmicRTD.RTD", "", "CONNECTION", "STATUS")
-            topics = ["CONNECTION", "STATUS"]
-            topic_array = win32com.client.VARIANT(pythoncom.VT_ARRAY | pythoncom.VT_VARIANT, topics)
+    def generate_connection_code(self):
+        """Generate connection code based on findings"""
+        print("\n" + "=" * 60)
+        print("SUGGESTED CONNECTION CODE")
+        print("=" * 60)
 
-            result = self.rtd.ConnectData(1, topic_array, True)
-            print(f"  → RTD ConnectData result: {result}")
+        code = '''
+# Based on scan results, try these connection parameters:
 
-            # Try RefreshData
-            topic_count = win32com.client.VARIANT(pythoncom.VT_I4 | pythoncom.VT_BYREF, 0)
-            data_array = self.rtd.RefreshData(topic_count)
+import socket
+import json
 
-            if data_array:
-                print(f"  → RTD RefreshData returned {topic_count.value} topics")
+class RithmicConnection:
+    def __init__(self):
+        # Rithmic Trader Pro uses these ports
+        self.ports = {
+            'primary': 3010,
+            'secondary': 3011,
+            'data1': 3012,
+            'data2': 3013,
+            'feed': 5555
+        }
+    
+    def connect(self, port_type='primary'):
+        port = self.ports.get(port_type, 3010)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect(('127.0.0.1', port))
+        print(f"Connected to Rithmic on port {port}")
+        return sock
 
-        except Exception as e:
-            print(f"  → RTD data retrieval test: {e}")
+# For WebSocket connections (if supported):
+# ws = websocket.create_connection("ws://127.0.0.1:3010/")
 
-    def test_excel_rtd_formula(self):
-        """Generate Excel RTD formulas for testing"""
-        print("\n📊 Excel RTD Formula Examples:")
-        print("-" * 50)
-        print("Paste these into Excel to test RTD:")
-        print()
-        print("Connection Status:")
-        print(f'  =RTD("{self.rtd_progid}", "", "CONNECTION", "STATUS")')
-        print()
-        print("Market Data (replace SYMBOL with actual symbol):")
-        print(f'  =RTD("{self.rtd_progid}", "", "SYMBOL", "LAST")')
-        print(f'  =RTD("{self.rtd_progid}", "", "SYMBOL", "BID")')
-        print(f'  =RTD("{self.rtd_progid}", "", "SYMBOL", "ASK")')
-        print()
-        print("Account Info:")
-        print(f'  =RTD("{self.rtd_progid}", "", "ACCOUNT", "BALANCE")')
-        print(f'  =RTD("{self.rtd_progid}", "", "ACCOUNT", "MARGIN")')
+# Note: The actual protocol may require authentication
+# Check Rithmic API documentation for message format
+'''
+        print(code)
 
     def run_all_tests(self):
         """Run comprehensive test suite"""
         print("=" * 60)
-        print("R|TRADER PRO RTD CONNECTION TEST SUITE")
+        print("RITHMIC TRADER PRO CONNECTION TEST")
         print("=" * 60)
         print()
 
-        results = {
-            "Port Open": False,
-            "WebSocket": False,
-            "RTD Registered": False,
-            "RTD Connection": False
-        }
+        # Test 1: Port connectivity
+        port_results = self.test_rithmic_ports()
 
-        # Test 1: Port
-        print("1. Testing Port Connectivity...")
-        print("-" * 40)
-        results["Port Open"] = self.test_port_open()
-        print()
+        # Test 2: Find RTD files
+        rtd_files, dll_files = self.find_rtd_files()
 
-        # Test 2: WebSocket
-        if results["Port Open"]:
-            print("2. Testing WebSocket Connection...")
-            print("-" * 40)
-            results["WebSocket"] = self.test_websocket()
-            print()
+        # Test 3: Test RTD COM
+        working_progid = self.test_rtd_com()
 
-        # Test 3: RTD Registration
-        print("3. Checking RTD Registration...")
-        print("-" * 40)
-        results["RTD Registered"] = self.test_rtd_registration()
-        print()
+        # Generate connection code
+        self.generate_connection_code()
 
-        # Test 4: RTD Connection
-        if results["RTD Registered"]:
-            print("4. Testing RTD Connection...")
-            print("-" * 40)
-            results["RTD Connection"] = self.test_rtd_connection()
-            print()
-
-        # Summary
+        # Excel setup instructions
+        print("\n" + "=" * 60)
+        print("EXCEL RTD SETUP")
         print("=" * 60)
-        print("TEST SUMMARY")
-        print("=" * 60)
-        for test, passed in results.items():
-            status = "✓ PASS" if passed else "✗ FAIL"
-            print(f"{test:20} {status}")
 
-        # Excel formulas
-        if results["RTD Registered"]:
-            self.test_excel_rtd_formula()
+        if not rtd_files and not working_progid:
+            print("⚠ RTD components not found. You may need to:")
+            print("1. Download Rithmic Excel RTD Add-in separately")
+            print("2. Check Rithmic's website or support for RTD installer")
+            print("3. In Excel, go to File → Options → Add-ins")
+            print("4. Look for 'Rithmic RTD' or similar")
+        else:
+            print("Try these Excel formulas:")
+            progid = working_progid or "Rithmic.RTD"
+            print(f'=RTD("{progid}","","CONNECTION","STATUS")')
+            print(f'=RTD("{progid}","","MNQ","LAST")')
+            print(f'=RTD("{progid}","","MNQ","BID")')
+            print(f'=RTD("{progid}","","MNQ","ASK")')
 
-        # Next steps
         print("\n" + "=" * 60)
         print("NEXT STEPS")
         print("=" * 60)
-
-        if not results["Port Open"]:
-            print("1. Start R|Trader Pro")
-            print("2. Enable 'Allow Plug-ins' in settings")
-
-        elif not results["WebSocket"]:
-            print("1. Verify 'Allow Plug-ins' is enabled in R|Trader Pro")
-            print("2. Check firewall settings for port 8000")
-
-        elif not results["RTD Registered"]:
-            print("1. Install Rithmic RTD if not already installed")
-            print("2. Register the RTD DLL (run as Administrator):")
-            print('   regsvr32 "C:\\Path\\To\\RithmicRTD.dll"')
-
-        elif not results["RTD Connection"]:
-            print("1. Ensure R|Trader Pro is logged in")
-            print("2. Check RTD permissions in R|Trader Pro")
-            print("3. Try the Excel formulas manually")
-
-        else:
-            print("✓ All tests passed! RTD interface appears to be ready.")
-            print("1. Test the Excel formulas in a spreadsheet")
-            print("2. Run your main trading application")
-
-def test_alternate_rtd_progids():
-    """Test alternative RTD ProgIDs that Rithmic might use"""
-    alternate_ids = [
-        "RithmicRTD.RTD",
-        "Rithmic.RTD",
-        "RTrader.RTD",
-        "RITHMIC.RTD.1",
-        "RithmicRTDServer.RTD"
-    ]
-
-    print("\nChecking for alternate RTD ProgIDs...")
-    print("-" * 40)
-
-    for prog_id in alternate_ids:
-        try:
-            pythoncom.CoInitialize()
-            rtd = win32com.client.Dispatch(prog_id)
-            print(f"✓ Found: {prog_id}")
-            pythoncom.CoUninitialize()
-            return prog_id
-        except:
-            continue
-
-    print("✗ No alternate RTD ProgIDs found")
-    return None
+        print("1. The API appears to use ports 3010-3013, not 8000")
+        print("2. Update your connection code to use these ports")
+        print("3. Check Rithmic documentation for the protocol format")
+        print("4. For RTD: May need separate RTD add-in installation")
 
 if __name__ == "__main__":
-    # Run main test suite
-    tester = RTraderProTester()
-
-    # Check for alternate ProgIDs first
-    alt_id = test_alternate_rtd_progids()
-    if alt_id:
-        tester.rtd_progid = alt_id
-
-    # Run all tests
+    tester = RithmicConnectionTester()
     tester.run_all_tests()
 
-    # Keep window open
     input("\nPress Enter to exit...")
